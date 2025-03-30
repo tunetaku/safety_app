@@ -1,0 +1,5 @@
+streamlit
+sqlite3
+pandas
+streamlit-local-storage
+streamlit-calendar

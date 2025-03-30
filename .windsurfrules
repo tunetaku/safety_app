@@ -1,0 +1,10 @@
+# 基本方針
+
+1. プロジェクトルートにあるドキュメントsafety_app_spec.mdを参考にコードを書く
+2. データベース構造は db/connection.pyに記述している
+3. データ取得系関数は db/getters.pyに記述する
+4. データ更新系関数は db/setters.pyに記述する
+
+# 技術スタック
+1. streamlit(最新版)
+2. その他は /requirements.txtを参照
