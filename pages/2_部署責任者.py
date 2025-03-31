@@ -1,18 +1,13 @@
 import streamlit as st
-import pandas as pd
 import datetime as dt
-from dateutil.relativedelta import relativedelta # 月計算用
-import calendar # カレンダー生成用
-import sys
-import os
 from db.getters import (
-    get_sites_by_department,
-    get_log_by_site_and_date,
+    get_sites_by_department, get_log_by_site_and_date,
     get_plan_by_site_and_date,
+    get_site_dates # 
 )
 from db.setters import (
-    update_approval_status, # 新しい承認関数 ★
-    add_site
+    add_site, update_approval_status,
+    update_site_dates, # 
 )
 
 #   === Page Logic Starts Here ===
@@ -51,7 +46,7 @@ if not validation_passed:
 
 st.title(f"{current_department_name}")
 
-tab_overview, tab_register = st.tabs(["現場状況確認", "現場新規登録"]) # 「承認待ち」は統合
+tab_overview, tab_register = st.tabs(["現場状況確認", "現場新規登録"]) 
 
 # --- Helper Function (曜日取得) ---
 def get_japanese_weekday(date_obj):
@@ -97,19 +92,13 @@ def approval_dialog(plan_data, log_data, site_name, selected_date_str, current_u
         if log_data:
             log_task = log_data['task'] if log_data['task'] else '未登録'
             log_personnel = (log_data['employee_workers'] or 0) + (log_data['partner_workers'] or 0)
-            log_comment = log_data['comment'] or '' # 承認コメント
             author = log_data['author'] or '不明'
-            is_log_approved = log_data['approved'] == 1
-            log_approver = log_data['approver'] or ''
             image_path = log_data['image_path']
 
             st.write(f"**タスク:** {log_task}")
             st.write(f"**人員:** {log_personnel} 名")
             st.text_area("現場コメント", value=log_data['action_check'] or '-', height=80, disabled=True, key=f"dialog_log_action_{log_id}", help="現場責任者が入力した点検項目等")
             st.write(f"記録者: {author}")
-            st.write(f"承認状況: {'<font color="green">承認済み</font>' if is_log_approved else '<font color="orange">未承認</font>'}", unsafe_allow_html=True)
-            if is_log_approved and log_approver:
-                 st.caption(f"承認者: {log_approver}")
 
             if image_path and os.path.exists(image_path):
                 st.image(image_path, caption="実績写真", width=200)
@@ -157,6 +146,41 @@ def approval_dialog(plan_data, log_data, site_name, selected_date_str, current_u
                 st.error("保留処理中にエラーが発生しました。")
     # 閉じるボタンはst.dialogでは不要
 
+# --- ★追加: 現場の日付編集モーダル --- #
+@st.dialog("現場管理期間 編集")
+def edit_site_dates_dialog(site_id, site_name):
+    st.subheader(f"{site_name} の管理期間")
+
+    current_dates = get_site_dates(site_id)
+    current_start_date_str = current_dates.get('start_date')
+    current_end_date_str = current_dates.get('end_date')
+
+    # 文字列から date オブジェクトへ変換 (None の場合は None のまま)
+    current_start_date = dt.datetime.strptime(current_start_date_str, '%Y-%m-%d').date() if current_start_date_str else None
+    current_end_date = dt.datetime.strptime(current_end_date_str, '%Y-%m-%d').date() if current_end_date_str else None
+
+    new_start_date = st.date_input("管理開始日", value=current_start_date)
+    new_end_date = st.date_input("管理終了日", value=current_end_date)
+
+    # Noneを許容する場合のバリデーション (例: 終了日 < 開始日はNG)
+    if new_start_date and new_end_date and new_end_date < new_start_date:
+        st.error("管理終了日は管理開始日より後に設定してください。")
+        save_disabled = True
+    else:
+        save_disabled = False
+
+    if st.button("保存", key=f"save_dates_{site_id}", disabled=save_disabled):
+        # date オブジェクトから文字列へ変換 (None はそのまま None)
+        new_start_date_str = new_start_date.strftime('%Y-%m-%d') if new_start_date else None
+        new_end_date_str = new_end_date.strftime('%Y-%m-%d') if new_end_date else None
+
+        success = update_site_dates(site_id, new_start_date_str, new_end_date_str)
+        if success:
+            st.toast("管理期間を更新しました。", icon="✅")
+            st.rerun()
+        else:
+            st.error("期間の更新に失敗しました。")
+
 with tab_overview:
 
     # --- シンプルな日付選択コンポーネント --- #
@@ -199,7 +223,7 @@ with tab_overview:
 
 
     # --- 選択された日付の現場状況テーブル --- #
-    sites_in_dept = get_sites_by_department(current_department_id)
+    sites_in_dept = get_sites_by_department(current_department_id, selected_date_str)
 
     if not sites_in_dept:
         st.info(f"{current_department_name}には登録されている現場はありません。")
@@ -227,7 +251,10 @@ with tab_overview:
             cols = st.columns([2, 3, 3, 1])
 
             with cols[0]: # 現場名
+                # ★変更: 現場名の下に編集ボタンを表示
                 st.write(site_name)
+                if st.button("⚙️", key=f"edit_dates_{site_id}", help="管理期間を編集"):
+                    edit_site_dates_dialog(site_id, site_name)
 
             with cols[1]: # 予定
                 if plan_data:
@@ -245,15 +272,12 @@ with tab_overview:
                     task = log_data['task'] if log_data['task'] else 'タスク未登録'
                     personnel = (log_data['employee_workers'] or 0) + (log_data['partner_workers'] or 0) # None の場合に 0 を使う
                     approved = log_data['approved'] == 1
-                    status_color = "green" if approved else "orange"
-                    status_text = "承認済" if approved else "未承認"
-                    st.markdown(f"**T:** {task}<br>**P:** {personnel}名<br>**状況:** <font color='{status_color}'>{status_text}</font>", unsafe_allow_html=True)
                 else:
                     st.caption("実績なし")
 
             with cols[3]: # アクション
                 button_key = f"details_{site_id}_{selected_date_str}"
-                if st.button("詳細・承認", key=button_key):
+                if st.button("確認する", key=button_key):
                     approval_dialog(plan_data, log_data, site_name, selected_date_str, current_user_name)
 
             st.markdown("--- ") # 各行の区切り

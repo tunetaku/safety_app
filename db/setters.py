@@ -207,4 +207,22 @@ def update_approval_status(plan_id, log_id, approved, approver_comment, approver
     finally:
         conn.close()
 
+# ★追加: 現場の開始日と終了日を更新する関数
+def update_site_dates(site_id, start_date, end_date):
+    """指定された現場IDの開始日と終了日を更新する"""
+    conn = get_db_connection()
+    try:
+        conn.execute(
+            'UPDATE sites SET start_date = ?, end_date = ? WHERE id = ?',
+            (start_date, end_date, site_id)
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"Error updating site dates for site_id {site_id}: {e}")
+        conn.rollback() # エラー発生時はロールバック
+        return False
+    finally:
+        conn.close()
+    return True
+
 # 必要に応じて他の setter 関数もここに追加

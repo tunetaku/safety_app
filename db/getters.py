@@ -10,9 +10,25 @@ def get_sites(): # 全現場取得
     conn.close()
     return sites
 
-def get_sites_by_department(department_id):
+def get_sites_by_department(department_id, date_str=None):
+    """指定された部署IDに所属する現場を取得する。
+    オプションで日付文字列を指定すると、その日付が管理期間内の現場のみを返す。
+    """
     conn = get_db_connection()
-    sites = conn.execute('SELECT id, name FROM sites WHERE department_id = ? ORDER BY name', (department_id,)).fetchall()
+    base_query = 'SELECT id, name FROM sites WHERE department_id = ?'
+    params = [department_id]
+
+    if date_str:
+        # 日付が指定された場合、管理期間の条件を追加
+        # start_date が NULL または 指定日以降
+        # end_date が NULL または 指定日以前
+        base_query += ' AND (start_date IS NULL OR start_date <= ?)'
+        base_query += ' AND (end_date IS NULL OR end_date >= ?)'
+        params.extend([date_str, date_str])
+
+    base_query += ' ORDER BY name'
+
+    sites = conn.execute(base_query, tuple(params)).fetchall()
     conn.close()
     return sites
 
@@ -377,20 +393,23 @@ def get_safety_plan_by_id(plan_id):
 # 新しい関数: 現場の詳細情報（デフォルト作業員数など）を取得
 def get_site_details(site_id):
     conn = get_db_connection()
-    conn.row_factory = lambda cursor, row: {
-        col[0]: row[idx] for idx, col in enumerate(cursor.description)
-    }
-    # sites テーブルから必要な列を取得 (列名は仮定)
-    site = conn.execute(
-        'SELECT id, default_employee_workers, default_partner_workers FROM sites WHERE id = ?',
-        (site_id,)
-    ).fetchone()
+    conn.row_factory = sqlite3.Row
+    site = conn.execute('SELECT * FROM sites WHERE id = ?', (site_id,)).fetchone()
     conn.close()
-    # 見つかった場合に辞書に id も含めて返す
-    if site:
-        site['id'] = site_id # 明示的にidを追加 (session state比較用)
-        return site
-    return None # 見つからない場合は None
+    # 存在しない場合の考慮は呼び出し元で行う想定
+    return site
+
+# ★追加: 指定した現場の開始日と終了日を取得
+def get_site_dates(site_id):
+    """指定された現場IDの開始日と終了日を取得する"""
+    conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
+    dates = conn.execute('SELECT start_date, end_date FROM sites WHERE id = ?', (site_id,)).fetchone()
+    conn.close()
+    if dates:
+        return {'start_date': dates['start_date'], 'end_date': dates['end_date']}
+    else:
+        return {'start_date': None, 'end_date': None}
 
 # --- Department Functions ---
 def get_departments():

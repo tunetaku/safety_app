@@ -17,23 +17,10 @@ from db.getters import (
     get_all_safety_plans_with_details
 )
 
-# === Page Logic Starts Here ===
-
-# 1. Get User Info from Session State
-user_name = st.session_state.get('user_name')
-user_role = st.session_state.get('user_role')
-
-# 2. Validate User Info and Role
-if not user_name or not user_role or user_role != "管理部門":
-    st.warning("設定が完了していないか、アクセス権限がありません。")
-    st.info("サイドバーの「設定」ページでユーザー情報を設定してください。")
-    if st.button("設定ページへ移動"):
-        st.switch_page("pages/0_設定.py")
-    st.stop()
 
 # If validation passes, proceed
-st.title(f"管理部門スタッフページ - {user_name}")
-st.write("全社の日誌・予定の閲覧、フィルタリング、CSV出力が可能です。")
+st.title(f"管理部門スタッフ向けページ")
+st.write("全社の日誌・予定の閲覧、フィルタリング、CSV出力が可能です。誰でも見れます。")
 
 # 3. Fetch Data
 logs_data = []

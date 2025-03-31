@@ -99,9 +99,6 @@ CREATE TABLE safety_logs (
     task TEXT,
     action_check TEXT,
     author TEXT,
-    approved INTEGER DEFAULT 0,
-    comment TEXT,
-    approver TEXT,
     image_path TEXT,
     FOREIGN KEY(site_id) REFERENCES sites(id)
 );
@@ -127,9 +124,9 @@ CREATE TABLE safety_plans (
     risk_check TEXT,
     risk_action TEXT,
     created_by TEXT,
-    approved INTEGER DEFAULT 0,
-    comment TEXT,
-    approver TEXT,
+    approved INTEGER DEFAULT 0, -- 承認状況(予定には必要)
+    comment TEXT, -- 承認コメント
+    approver TEXT, -- 承認者
     FOREIGN KEY(site_id) REFERENCES sites(id)
 );
 ```
