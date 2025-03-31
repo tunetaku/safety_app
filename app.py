@@ -1,3 +1,5 @@
+# 安全総点検アプリ
+
 import streamlit as st
 import os
 import pandas as pd
@@ -103,7 +105,7 @@ def clear_settings():
 # --- Main App Logic ---
 def main():
     st.set_page_config(layout="wide")
-    st.title("安全管理アプリ")
+    st.title("安全総点検アプリ")
 
     if 'user_settings_loaded' not in st.session_state:
         st.session_state.user_settings_loaded = True

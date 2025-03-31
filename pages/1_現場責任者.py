@@ -1,4 +1,4 @@
-# pages/1_現場責任者.py
+# pages/1_現場の責任者.py
 
 import streamlit as st
 import datetime as dt
@@ -263,8 +263,8 @@ def show_plan_modal_new(plan_id=None, target_date=None, site_id=None, user_name=
         st.error(f"現場情報取得エラー: {e}")
         site_settings = {}
         
-    default_employee_workers = plan_data.get('employee_workers', site_settings.get('default_employee_workers', 0))
-    default_partner_workers = plan_data.get('partner_workers', site_settings.get('default_partner_workers', 0))
+    default_employee_workers = plan_data.get('employee_workers', site_settings['default_employee_workers'])
+    default_partner_workers = plan_data.get('partner_workers', site_settings['default_partner_workers'])
     default_task = plan_data.get('task', '')
     # --- リスクチェックのデフォルト値を新しい形式に合わせて読み込む --- #
     default_risk_check_json = plan_data.get('risk_check', '{}') # JSON文字列
@@ -416,19 +416,19 @@ with st.sidebar:
 
         is_suspended = st.checkbox(
             "休工中",
-            value=bool(site_settings.get('is_suspended', 0)),
+            value=bool(site_settings['is_suspended']),
             help="チェックを入れると、部署責任者画面の現場リストで「休工中」と表示されます。"
         )
         default_emp = st.number_input(
             "社員デフォルト人員",
             min_value=0,
-            value=site_settings.get('default_employee_workers', 0),
+            value=site_settings['default_employee_workers'],
             help="安全計画や実績ログを新規追加する際の初期値として使用されます。"
         )
         default_part = st.number_input(
             "協力会社デフォルト人員",
             min_value=0,
-            value=site_settings.get('default_partner_workers', 0),
+            value=site_settings['default_partner_workers'],
             help="安全計画や実績ログを新規追加する際の初期値として使用されます。"
         )
 
@@ -453,8 +453,8 @@ except Exception as e:
     st.error(f"現場情報取得エラー: {e}")
     site_settings = {}
 
-default_employee_workers = site_settings.get('default_employee_workers', 0)
-default_partner_workers = site_settings.get('default_partner_workers', 0)
+default_employee_workers = site_settings['default_employee_workers']
+default_partner_workers = site_settings['default_partner_workers']
 
 # --- 月のナビゲーション状態管理 ---
 if 'current_month' not in st.session_state:
